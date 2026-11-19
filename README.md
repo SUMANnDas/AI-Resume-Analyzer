@@ -1,321 +1,89 @@
-<p><small>Best View in <a href="https://github.com/settings/appearance">Light Mode</a> and Desktop Site (Recommended)</small></p><br/>
+# ResumeLens
 
-![AI-Resume-Analyzer](https://socialify.git.ci/deepakpadhi986/AI-Resume-Analyzer/image?description=1&descriptionEditable=5th%20Sem%20Final%20Year%20Project%20at%20Kirti%20M%20Doongursee%20College%20(2022%20-%2023)&font=Raleway&language=1&pattern=Plus&theme=Light)
+ResumeLens is a local-first resume review and job-description comparison app. It extracts selectable text from a PDF, checks for common resume sections, identifies skills from a built-in vocabulary, and shows exact skill overlap with a target role.
 
-<div align="center">
-  <h1>🌴 AI RESUME ANALYZER 🌴</h1>
-  <p>A Tool for Resume Analysis, Predictions and Recommendations</p>
-  <!-- Badges -->
-  <p>
-    <img src="https://img.shields.io/github/last-commit/deepakpadhi986/AI-Resume-Analyzer" alt="last update" />
-    <img src="https://badges.frapsoft.com/os/v2/open-source.svg?v=103" alt="open source" />
-    <img src="https://img.shields.io/github/languages/top/deepakpadhi986/AI-Resume-Analyzer?color=red" alt="language" />
-    <img src="https://img.shields.io/github/languages/code-size/deepakpadhi986/AI-Resume-Analyzer?color=informational" alt="code size" />
-    <a href="https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/LICENSE">
-      <img src="https://img.shields.io/github/license/deepakpadhi986/AI-Resume-Analyzer.svg?color=yellow" alt="license" />
-    </a>
-  </p>
-  
-  <!--links-->
-  <h4>
-    <a href="#preview-">View Demo</a>
-    <span> · </span>
-    <a href="#setup--installation-">Installation</a>
-    <span> · </span>
-    <a href="mailto:dnoobnerd@gmail.com?subject=I%20Want%20The%20Project%20Report%20of%20AI-RESUME-ANALYZER%20(2022%20 %2023)&body=Here%20Are%20My%20Details%20%F0%9F%98%89%0D%0A%0D%0AOrganization%2FCollege%20Name%3A%20%0D%0A%0D%0AFull%20Name%3A%20%0D%0A%0D%0AGitHub%20Profile%20%3A%20%0D%0A%0D%0AFrom%20where%20did%20you%20get%20to%20know%20about%20this%20project%3A%0D%0A%0D%0APurpose%20of%20asking%20project%20report%20(describe)%3A%0D%0A%0D%0A%0D%0AIf%20the%20above%20information%20satisfy%20your%20identity%20you%20will%20get%20the%20report%20to%20your%20email.">Project Report</a>
-  </h4>
-  <p>
-    <small align="justify">
-      Built with 🤍 by 
-      <a href="https://dnoobnerd.netlify.app/">Deepak Padhi</a> through 
-      <a href="https://www.linkedin.com/in/mrbriit/">Dr Bright --(Data Scientist)</a>
-     </small>
-  </p>
-  <small align="justify">🚀 A Project Submitted for the partial fulfilment of the degree B.sc CS at 
-    <a href="https://kirticollege.edu.in/">Kirti College</a> during academic year 2022-23
-  </small>
-</div><br/><br/>
+The interface is built with Streamlit. PDF extraction uses `pdfminer.six`, and the section and job-match checks are transparent Python rules. There is no account system, database, external AI service, or API key to configure.
 
-## About the Project 🥱
-<div align="center">
-    <br/><img src="https://raw.githubusercontent.com/deepakpadhi986/AI-Resume-Analyzer/main/screenshots/RESUME.png" alt="screenshot" /><br/><br/>
-    <p align="justify"> 
-      A tool which parses information from a resume using natural language processing and finds the keywords, cluster them onto sectors based on their keywords. 
-      And lastly show recommendations, predictions, analytics to the applicant / recruiter based on keyword matching.
-    </p>
-</div>
+## What it does
 
-## Scope 😲
-i. It can be used for getting all the resume data into a structured tabular format and csv as well, so that the organization can use those data for analytics purposes
+- **Resume audit:** section coverage checklist, detected skills, broad skill clusters, and prioritized suggestions.
+- **Job match:** compare recognized skills in a resume with skills found in a pasted job description.
+- **Privacy-safe export:** download an audit JSON without resume text or personal contact values.
+- **Private by default:** documents are analyzed in memory and are not written to an upload folder or database.
+- **Local interface:** Streamlit binds to `127.0.0.1` by default.
 
-ii. By providing recommendations, predictions and overall score user can improve their resume and can keep on testing it on our tool
+The score is a section-presence checklist, not a measure of writing quality, ATS compatibility, qualification, or hiring likelihood. Job matching uses exact vocabulary overlap and may miss synonyms or context. Scanned image PDFs are not supported because OCR is not included.
 
-iii. And it can increase more traffic to our tool because of user section
+## Requirements
 
-iv. It can be used by colleges to get insight of students and their resume before placements
+- Windows, macOS, or Linux
+- Python 3.11 or newer
+- Internet access to install Python packages
 
-v. Also, to get analytics for roles which users are mostly looking for
+## Setup on Windows PowerShell
 
-vi. To improve this tool by getting feedbacks
+Open PowerShell in the repository folder and run:
 
-## ✨ Try a Live AI Resume & Career Toolkit
-
-Want to explore AI-powered resume analysis without setting up this project locally?
-
-<a href="https://www.cvinsight.me/?utm_source=github&utm_medium=affiliate&utm_campaign=deepak">
-  <img src="https://img.shields.io/badge/Try_CVInsight-AI_Resume_%26_Career_Toolkit-6C63FF?style=for-the-badge" alt="Try CVInsight" />
-</a>
-
-**[CVInsight](https://www.cvinsight.me/?utm_source=github&utm_medium=affiliate&utm_campaign=deepak)** is an independent platform offering tools to help you with your career, including:
-
-- 📄 AI-powered resume analysis and feedback
-- 🛠️ Resume creation and customization with Resume Studio
-- 🔥 Resume Roast for resume feedback
-- 🎯 Interview practice and job preparation
-
-**🎁 Offer:** Use code `DEEPAK10` for 10% off eligible paid plans.
-
-<sub>Disclosure: CVInsight is an independent platform. This is an optional partner recommendation and does not affect the availability of this open-source project.</sub>
-
-<!-- TechStack -->
-## Tech Stack 🍻
-<details>
-  <summary>Frontend</summary>
-  <ul>
-    <li><a href="https://streamlit.io/">Streamlit</a></li>
-    <li><a href="https://developer.mozilla.org/en-US/docs/Learn/HTML">HTML</a></li>
-    <li><a href="https://developer.mozilla.org/en-US/docs/Web/CSS">CSS</a></li>
-    <li><a href="https://developer.mozilla.org/en-US/docs/Learn/JavaScript">JavaScript</a></li>
-  </ul>
-</details>
-
-<details>
-  <summary>Backend</summary>
-  <ul>
-    <li><a href="https://streamlit.io/">Streamlit</a></li>
-    <li><a href="https://www.python.org/">Python</a></li>
-  </ul>
-</details>
-
-<details>
-<summary>Database</summary>
-  <ul>
-    <li><a href="https://www.mysql.com/">MySQL</a></li>
-  </ul>
-</details>
-
-<details>
-<summary>Modules</summary>
-  <ul>
-    <li><a href="https://pandas.pydata.org/">pandas</a></li>
-    <li><a href="https://github.com/OmkarPathak/pyresparser">pyresparser</a></li>
-    <li><a href="https://pypi.org/project/pdfminer3/">pdfminer3</a></li>
-    <li><a href="https://plotly.com/">Plotly</a></li>
-    <li><a href="https://www.nltk.org/">NLTK</a></li>
-  </ul>
-</details>
-
-<!-- Features -->
-## Features 🤦‍♂️
-### Client: -
-- Fetching Location and Miscellaneous Data
-
-  Using Parsing Techniques to fetch
-- Basic Info
-- Skills
-- Keywords
-
-Using logical programs, it will recommend
-- Skills that can be added
-- Predicted job role
-- Course and certificates
-- Resume tips and ideas
-- Overall Score
-- Interview & Resume tip videos
-
-### Admin: -
-- Get all applicant’s data into tabular format
-- Download user’s data into csv file
-- View all saved uploaded pdf in Uploaded Resume folder
-- Get user feedback and ratings
-  
-  Pie Charts for: -
-- Ratings
-- Predicted field / roles
-- Experience level
-- Resume score
-- User count
-- City
-- State
-- Country
-
-### Feedback: -
-- Form filling
-- Rating from 1 – 5
-- Show overall ratings pie chart
-- Past user comments history 
-
-## Requirements 😅
-### Have these things installed to make your process smooth 
-1) Python (3.9.12) https://www.python.org/downloads/release/python-3912/
-2) MySQL https://www.mysql.com/downloads/
-3) Visual Studio Code **(Prefered Code Editor)** https://code.visualstudio.com/Download
-4) Visual Studio build tools for C++ https://aka.ms/vs/17/release/vs_BuildTools.exe
-
-## Setup & Installation 👀
-
-To run this project, perform the following tasks 😨
-
-Download the code file manually or via git
-```bash
-git clone https://github.com/deepakpadhi986/AI-Resume-Analyzer.git
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r App\requirements.txt
 ```
 
-Create a virtual environment and activate it **(recommended)**
+If PowerShell prevents environment activation, allow it for this terminal session and activate again:
 
-Open your command prompt and change your project directory to ```AI-Resume-Analyzer``` and run the following command 
-```bash
-python -m venv venvapp
-
-cd venvapp/Scripts
-
-activate
-
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
 ```
 
-Downloading packages from ```requirements.txt``` inside ``App`` folder
-```bash
-cd../..
+## Start the app
 
-cd App
+From the repository root:
 
-pip install -r requirements.txt
-
-python -m spacy download en_core_web_sm
-
+```powershell
+python -m streamlit run App\App.py
 ```
 
-After installation is finished create a Database ```cv```
+Open the local address printed in the terminal, normally <http://127.0.0.1:8501>. Stop the server with `Ctrl+C` in that terminal.
 
-And change user credentials inside ```App.py```
-https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/17e1cdb207fef62557dc394f4158bda515e541fd/App/App.py#L95
+To use the existing project environment instead of creating a new one:
 
-Go to ```venvapp\Lib\site-packages\pyresparser``` folder
-
-And replace the ```resume_parser.py``` with ```resume_parser.py``` 
-
-which was provided by me inside ```pyresparser``` folder
-
-``Congratulations 🥳😱 your set-up 👆 and installation is finished 😵🤯``
-
-I hope that your ``venvapp`` is activated and working directory is inside ``App``
-
-Run the ```App.py``` file using
-```bash
-streamlit run App.py
-
+```powershell
+.\.venvapp\Scripts\python.exe -m streamlit run App\App.py
 ```
 
-## Known Error 🤪
-If ``GeocoderUnavailable`` error comes up then just check your internet connection and network speed
+## Setup on macOS or Linux
 
-## Issue While Installation and Set-up 🤧
-Check-out installation [Video](https://youtu.be/WFruijLC1Nc)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r App/requirements.txt
+python -m streamlit run App/App.py
+```
 
-Feel Free to <a href="mailto:dnoobnerd@gmail.com?subject=I%20have%20an%20issue%20while%20setup%2Finstalling%20of%20AI%20RESUME%20ANALYZER&body=Name%3A%20-%0D%0A%0D%0ADesignation%3A%20-%0D%0A%0D%0APlease%20describe%20your%20problem%20in%20brief%20with%20attached%20photos%20of%20error">Send mail</a>
+## Use the workspace
 
-## Usage
-- After the setup it will do stuff's automatically
-- You just need to upload a resume and see it's magic
-- Try first with my resume uploaded in ``Uploaded_Resumes`` folder
-- Admin userid is ``admin`` and password is ``admin@resume-analyzer``
+1. Open **Resume audit** and upload a text-based PDF (up to 10 MB and 20 pages).
+2. Review detected sections, skills, contact-presence signals, and suggestions.
+3. Open **Job match**, paste a job description, and compare recognized skills.
+4. Download the privacy-safe JSON audit if you want to keep the checklist.
 
-<!-- Roadmap -->
-## Roadmap 🛵
-* [x] Predict user experience level.
-* [x] Add resume scoring criteria for skills and projects.
-* [x] Added fields and recommendations for web, android, ios, data science.
-* [ ] Add more fields for other roles, and its recommendations respectively. 
-* [x] Fetch more details from users resume.
-* [ ] View individual user details.
+The resume and pasted description remain in the active Streamlit session. Refresh the page or clear the upload to remove the current analysis. A hosted deployment processes the document on its server, so use a host you trust.
 
-## Contributing 🤘
-Pull requests are welcome. 
+## Project layout
 
-For major changes, please open an issue first to discuss what you would like to change.
+```text
+App/
+  App.py                  Streamlit interface and navigation
+  resume_parser_local.py  In-memory PDF extraction and rule-based analysis
+  requirements.txt        Runtime dependencies
+.streamlit/
+  config.toml             Local-only server and privacy settings
+```
 
-I've attached the <a href="https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/RESUME%20ANALYSER%20SYNOPSIS.pdf">synopsis</a> of the project
+No database setup is required. Uploaded files are not retained by the new analysis flow.
 
-If you want the full report of project
-<a href="mailto:dnoobnerd@gmail.com?subject=I%20Want%20The%20Project%20Report%20of%20AI-RESUME-ANALYZER%20(2022%20-%2023)&body=Here%20Are%20My%20Details%20%F0%9F%98%89%0D%0A%0D%0AOrganization%2FCollege%20Name%3A%20%0D%0A%0D%0AFull%20Name%3A%20%0D%0A%0D%0AGitHub%20Profile%20%3A%20%0D%0A%0D%0AFrom%20where%20did%20you%20get%20to%20know%20about%20this%20project%3A%0D%0A%0D%0APurpose%20of%20asking%20project%20report%20(describe)%3A%0D%0A%0D%0A%0D%0AIf%20the%20above%20information%20satisfy%20your%20identity%20you%20will%20get%20the%20report%20to%20your%20email.">Email Me</a> ``it's FREE``
 
-## Acknowledgement 🤗
-- <a href="https://www.linkedin.com/in/mrbriit/">Dr Bright</a> - <a href="https://www.udemy.com/course/the-full-stack-data-scientist-bootcamp/">(The Full Stack Data Scientist BootCamp)</a>
-- <a href="https://www.academia.edu/32543544/Resume_Parser_with_Natural_Language_Processing">Resume Parser with Natural Language Processing</a>
-- <a href="https://github.com/OmkarPathak/pyresparser">pyresparser</a>
-
-## Preview 👽
-
-### Client Side
-
-**Main Screen**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/1-main-screen.png?raw=true)
-
-**Resume Analysis**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/2-analysis.jpg?raw=true)
-
-**Skill Recommendation**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/3-recom.png?raw=true)
-
-**Course Recommendation**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/4-recom.png?raw=true)
-
-**Tips and Overall Score**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/5-tipsscore.png?raw=true)
-
-**Video Recommendation**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/user/6-recom.png?raw=true)
-
-### Feedback
-
-**Feedback Form**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/feedback/1-form.png?raw=true)
-
-**Overall Rating Analysis and Comment History**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/feedback/2-analytics.png?raw=true)
-
-### Admin
-
-**Login**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/1-main-screen.png?raw=true)
-
-**User Count and it's data**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/2-user-data.png?raw=true)
-
-**Exported csv file**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/3-user-datacsv.png?raw=true)
-
-**Feedback Data**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/4-feed-data.png?raw=true)
-
-**Pie Chart Analytical Representation of clusters**
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/5-pieexp.png?raw=true)
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/6-piescre.jpg?raw=true)
-
-![Screenshot](https://github.com/deepakpadhi986/AI-Resume-Analyzer/blob/main/screenshots/admin/7-pielocation.png?raw=true)
-
-### Built with 🤍 AI RESUME ANALYZER by <a href="https://dnoobnerd.netlify.app/">Deepak Padhi</a>

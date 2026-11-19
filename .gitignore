@@ -1,0 +1,15 @@
+# Python environments and cache
+.venv/
+.venvapp/
+venv/
+__pycache__/
+*.py[cod]
+
+# Local databases, virtual environments, and Streamlit secrets
+App/data/
+.streamlit/secrets.toml
+App/.streamlit/secrets.toml
+
+# Uploaded resumes are private local files and must never be committed.
+App/Uploaded_Resumes/*
+!App/Uploaded_Resumes/.gitkeep
