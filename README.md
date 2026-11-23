@@ -85,6 +85,6 @@ App/
   config.toml             Local-only server and privacy settings
 ```
 
-No database setup is required. Uploaded files are not retained by the new analysis flow.
+No database setup is required. Uploaded files are not retained by the analysis flow.
 
 
