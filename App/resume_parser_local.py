@@ -33,6 +33,23 @@ SKILL_TERMS = (
 EMAIL_PATTERN = re.compile(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", re.IGNORECASE)
 PHONE_PATTERN = re.compile(r"(?<!\w)(?:\+?\d[\d().\s-]{7,}\d)(?!\w)")
 LINKEDIN_PATTERN = re.compile(r"(?:linkedin\.com/in/|linkedin\.com/company/)", re.IGNORECASE)
+BULLET_PATTERN = re.compile(r"^\s*(?:[•●▪◦‣*–—-]|\d+[.)])\s+")
+METRIC_PATTERN = re.compile(
+    r"(?<!\w)(?:[$€£]\s*\d[\d,.]*(?:\s?[KMB])?|"
+    r"\d[\d,.]*\s?(?:%|x|k|m|b)(?!\w)|"
+    r"\d[\d,.]*\s+(?:users?|customers?|clients?|projects?|people|"
+    r"team members?|employees?|hours?|weeks?|months?|years?|days?))",
+    re.IGNORECASE,
+)
+ACTION_VERBS = frozenset(
+    "accelerated achieved automated built collaborated created decreased delivered "
+    "designed developed directed improved increased launched led maintained managed "
+    "optimized organized reduced redesigned resolved scaled streamlined trained "
+    "transformed upgraded wrote analyzed implemented introduced negotiated "
+    "coordinated established generated migrated published saved secured supported "
+    "tested validated".split()
+)
+FIRST_PERSON_PATTERN = re.compile(r"\b(?:i|me|my|mine|we|us|our|ours)\b", re.IGNORECASE)
 
 SECTION_CONFIG = {
     "Summary": {
@@ -140,6 +157,28 @@ def analyze_resume_text(text: str, page_count: int) -> dict[str, object]:
     score = sum(int(section["earned"]) for section in sections.values())
 
     skills = find_skills(text)
+
+    # These are lightweight writing signals. PDF extraction can alter line breaks,
+    # so the UI describes them as clues to review rather than definitive findings.
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    bullet_lines = [BULLET_PATTERN.sub("", line).strip() for line in lines if BULLET_PATTERN.match(line)]
+    action_led_lines = [
+        line for line in lines
+        if (words := re.findall(r"[a-z]+", BULLET_PATTERN.sub("", line).casefold()))
+        and words[0] in ACTION_VERBS
+    ]
+    evidence_lines = bullet_lines or action_led_lines
+    content_signals = {
+        "bullet_lines": len(bullet_lines),
+        "action_led_lines": len(action_led_lines),
+        "quantified_lines": sum(bool(METRIC_PATTERN.search(line)) for line in evidence_lines),
+        "long_lines": sum(len(line.split()) > 35 for line in evidence_lines),
+        "first_person_mentions": len(FIRST_PERSON_PATTERN.findall(text)),
+        "word_count": len(re.findall(r"\b[\w’'-]+\b", text)),
+    }
+    content_signals["reviewable_lines"] = len(evidence_lines)
+    extraction_quality = "limited" if content_signals["word_count"] < 80 else "usable"
+
     role_signals = []
     for label, terms in ROLE_CLUSTERS.items():
         matches = sorted(terms.intersection(skills))
@@ -157,6 +196,36 @@ def analyze_resume_text(text: str, page_count: int) -> dict[str, object]:
             "text": "Check that your resume includes a professional email, a reliable phone number, and a profile link if you use one.",
             "priority": 10 - contact_points,
         })
+    if evidence_lines and not content_signals["quantified_lines"]:
+        suggestions.append({
+            "section": "Measurable impact",
+            "text": "No numbers were detected in the recognizable achievement lines. Where accurate, add the scale, time saved, volume, or result behind your work.",
+            "priority": 18,
+        })
+    if bullet_lines and content_signals["action_led_lines"] < max(1, round(len(bullet_lines) * 0.4)):
+        suggestions.append({
+            "section": "Achievement bullets",
+            "text": "Some bullet lines do not appear to start with a recognized action verb. Lead with the work you did, then add its result or scope.",
+            "priority": 12,
+        })
+    if content_signals["long_lines"]:
+        suggestions.append({
+            "section": "Bullet readability",
+            "text": f"{content_signals['long_lines']} recognizable achievement line(s) are longer than 35 words. Consider splitting or trimming them while keeping the outcome and context.",
+            "priority": 8,
+        })
+    if content_signals["first_person_mentions"]:
+        suggestions.append({
+            "section": "Concise writing",
+            "text": "First-person wording was detected. Check whether phrases such as “I” or “my” can be removed so each achievement starts with its contribution.",
+            "priority": 4,
+        })
+    if extraction_quality == "limited":
+        suggestions.append({
+            "section": "Text extraction",
+            "text": "Very little selectable text was extracted. Check the PDF text by selecting it, or export a text-based PDF; this review may miss content in image-only or complex layouts.",
+            "priority": 20,
+        })
     suggestions.sort(key=lambda item: (-int(item["priority"]), str(item["section"])))
 
     return {
@@ -166,6 +235,8 @@ def analyze_resume_text(text: str, page_count: int) -> dict[str, object]:
         "skills": skills,
         "role_signals": role_signals[:3],
         "contact_signals": contact_signals,
+        "content_signals": content_signals,
+        "extraction_quality": extraction_quality,
         "suggestions": suggestions,
     }
 

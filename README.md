@@ -6,13 +6,14 @@ The interface is built with Streamlit. PDF extraction uses `pdfminer.six`, and t
 
 ## What it does
 
-- **Resume audit:** section coverage checklist, detected skills, broad skill clusters, and prioritized suggestions.
-- **Job match:** compare recognized skills in a resume with skills found in a pasted job description.
-- **Privacy-safe export:** download an audit JSON without resume text or personal contact values.
+- **Resume audit:** section coverage checklist, contact-presence signals, detected skills, broad skill clusters, and prioritized suggestions.
+- **Achievement review:** transparent checks for action-led lines, numbers in recognizable achievement lines, long lines, first-person wording, and limited text extraction.
+- **Job match:** compare recognized skills in a resume with skills found in a pasted job description, with matched and not-detected terms.
+- **Privacy-safe exports:** download the resume audit or role comparison as JSON without resume text, job-description text, or personal contact values.
 - **Private by default:** documents are analyzed in memory and are not written to an upload folder or database.
 - **Local interface:** Streamlit binds to `127.0.0.1` by default.
 
-The score is a section-presence checklist, not a measure of writing quality, ATS compatibility, qualification, or hiring likelihood. Job matching uses exact vocabulary overlap and may miss synonyms or context. Scanned image PDFs are not supported because OCR is not included.
+The score is a section-presence checklist, not a measure of writing quality, ATS compatibility, qualification, or hiring likelihood. Achievement checks use extracted PDF line breaks and a small action-verb and number pattern list; they can miss evidence or misread unusual layouts. Job matching uses exact vocabulary overlap and may miss synonyms or context. Scanned image PDFs are not supported because OCR is not included.
 
 ## Requirements
 
@@ -67,7 +68,7 @@ python -m streamlit run App/App.py
 ## Use the workspace
 
 1. Open **Resume audit** and upload a text-based PDF (up to 10 MB and 20 pages).
-2. Review detected sections, skills, contact-presence signals, and suggestions.
+2. Review section coverage, writing signals, detected skills, contact-presence signals, and prioritized suggestions.
 3. Open **Job match**, paste a job description, and compare recognized skills.
 4. Download the privacy-safe JSON audit if you want to keep the checklist.
 
@@ -78,7 +79,7 @@ The resume and pasted description remain in the active Streamlit session. Refres
 ```text
 App/
   App.py                  Streamlit interface and navigation
-  resume_parser_local.py  In-memory PDF extraction and rule-based analysis
+  resume_parser_local.py  In-memory PDF extraction and transparent rule-based analysis
   requirements.txt        Runtime dependencies
 .streamlit/
   config.toml             Local-only server and privacy settings
