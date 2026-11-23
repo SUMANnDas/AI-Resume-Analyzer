@@ -135,7 +135,7 @@ def overview_page() -> None:
     st.write("")
     feature_cards = (
         ("01 · Audit", "Understand your resume", "Review section coverage, achievement writing signals, detected skills, and prioritized edits in one report."),
-        ("02 · Compare", "Match a target role", "Paste a job description to see overlapping skills and the requirements your resume does not mention."),
+        ("02 · Compare", "Match a target role", "Estimate role-specific ATS alignment from skill overlap, resume structure, and contact signals."),
         ("03 · Improve", "Leave with a plan", "Use practical suggestions to guide your next revision, then export a privacy-safe audit or role comparison."),
     )
     st.markdown('<div class="feature-grid">' + "".join(card_markup(*item) for item in feature_cards) + '</div>', unsafe_allow_html=True)
@@ -159,7 +159,7 @@ def overview_page() -> None:
             ("Pages", str(result["page_count"]), "Current in-memory document"),
         )
         st.markdown('<div class="metric-grid three">' + "".join(metric_card_markup(*item) for item in metrics) + '</div>', unsafe_allow_html=True)
-        st.caption("Your analysis is held for this browser session only. Clear the file in Resume audit or refresh to remove it.")
+        st.caption("Your analysis stays available as you move between pages. Use Start a new audit to clear it.")
 
     if st.button("Open resume audit", type="primary", use_container_width=False):
         st.session_state["navigation"] = "Resume audit"
@@ -289,36 +289,158 @@ def render_resume_analysis(result: dict[str, object]) -> None:
     st.caption("The export contains detected skills and checklist results. It excludes the resume text and personal contact values.")
 
 
+def _role_digest(title: str, description: str) -> str:
+    if not description.strip():
+        return ""
+    role_input = f"{title.strip()}\0{description.strip()}"
+    return hashlib.sha256(role_input.encode("utf-8")).hexdigest()
+
+
+def _sync_role_inputs(page: str, title_key: str, details_key: str) -> None:
+    if st.session_state.get("active_role_input_page") != page:
+        st.session_state[title_key] = st.session_state.get("saved_target_job_title", "")
+        st.session_state[details_key] = st.session_state.get("saved_target_job_details", "")
+        st.session_state["active_role_input_page"] = page
+
+
+def render_role_match(match: dict[str, object], title: str, resume: dict[str, object]) -> None:
+    display_title = title.strip() or "Target role"
+    st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
+    st.subheader("Role alignment")
+    st.caption(display_title)
+    st.markdown(
+        '<div class="signal-note">This is a transparent ATS-style estimate, not a score from an employer’s ATS and not a prediction of interview or hiring outcomes.</div>',
+        unsafe_allow_html=True,
+    )
+    components = match["score_components"]
+    score_metrics = (
+        ("ATS match estimate", f"{match['ats_score']} / 100", str(match["score_band"])),
+        ("Recognized skill coverage", f"{match['coverage']}%", f"{len(match['matched_skills'])} of {len(match['required_skills'])} role skills detected"),
+        ("Structure checklist", f"{components['structure_coverage']}%", "Section coverage, excluding contact signals"),
+        ("What-if estimate", f"{match['projected_score']} / 100", f"+{match['potential_score_gain']} points if gaps are genuinely evidenced"),
+    )
+    st.markdown('<div class="metric-grid">' + "".join(metric_card_markup(*item) for item in score_metrics) + '</div>', unsafe_allow_html=True)
+    st.progress(match["ats_score"] / 100, text=f"{match['ats_score']} / 100 · {match['score_band']}")
+
+    with st.expander("How this estimate is calculated"):
+        st.markdown(
+            f"- **Recognized skill coverage — 70%:** {components['keyword_coverage']}% of skills found in the title and details also appear in the resume’s detected skill list.\n"
+            f"- **Resume structure — 20%:** {components['structure_coverage']}% from the section checklist, excluding contact signals.\n"
+            f"- **Contact completeness — 10%:** {components['contact_completeness']}% based on whether email, phone, and LinkedIn signals were found.\n\n"
+            "Alignment bands are heuristic: under 45 is limited, 45–74 is developing, and 75 or higher is strong. The what-if estimate assumes every currently missing recognized skill is already supported by real experience and can be represented in the resume. It is an illustration, not a guaranteed score change."
+        )
+    if resume.get("extraction_quality") == "limited":
+        st.warning("The PDF yielded limited selectable text, so the skill overlap and estimate may miss resume content.")
+    if match["missing_skills"]:
+        st.markdown(
+            '<div class="signal-note"><b>Suggested next step:</b> Review each missing term against your experience. If you can support it, describe that work naturally in the relevant section; do not add unsupported keywords.</div>',
+            unsafe_allow_html=True,
+        )
+    elif match["required_skills"]:
+        st.success("All recognized skills from this role description were detected in your resume.")
+
+    left, right = st.columns(2, gap="large")
+    with left:
+        st.subheader("Skills found in both")
+        if match["matched_skills"]:
+            for skill in match["matched_skills"]:
+                st.markdown(f"✓ &nbsp; {html.escape(skill)}", unsafe_allow_html=True)
+        else:
+            st.caption("No recognized skills overlap yet.")
+    with right:
+        st.subheader("Skills not detected")
+        if match["missing_skills"]:
+            for skill in match["missing_skills"]:
+                st.markdown(f"＋ &nbsp; {html.escape(skill)}", unsafe_allow_html=True)
+        else:
+            st.caption("No recognized skill gaps found.")
+
+    report = {
+        "product": "ResumeLens",
+        "target_role": display_title,
+        "ats_match_estimate": match["ats_score"],
+        "alignment_band": match["score_band"],
+        "illustrative_what_if_score": match["projected_score"],
+        "keyword_coverage_percent": match["coverage"],
+        "score_components": match["score_components"],
+        "score_weights_percent": match["score_weights"],
+        "recognized_requirements": match["required_skills"],
+        "matched_skills": match["matched_skills"],
+        "not_detected": match["missing_skills"],
+        "note": "Local vocabulary and checklist heuristic only. Not an employer ATS score, qualification assessment, or hiring prediction. Resume text, job description, and contact values are excluded.",
+    }
+    st.download_button(
+        "Download role analysis (JSON)",
+        data=json.dumps(report, indent=2, ensure_ascii=False),
+        file_name="resumelens-role-analysis.json",
+        mime="application/json",
+        key="download_role_analysis",
+    )
+
+
 def audit_page() -> None:
-    page_heading("Resume audit", "A clear view of what your resume communicates", "Upload a text-based PDF for a private, rule-based structure and skills review.")
+    page_heading("Resume audit", "Make your resume fit the role", "Upload a resume, add the target job, and review a focused match report with clear next steps.")
     st.markdown(
         '<div class="privacy">🔒 <b>Private processing</b> · The PDF is processed in memory by this app and is not saved to a database or uploaded folder. For local use, run this app on your own computer.</div>',
         unsafe_allow_html=True,
     )
     st.write("")
-    uploaded = st.file_uploader("Choose your resume", type=["pdf"], help="PDF only · maximum 10 MB · scanned image PDFs are not supported yet.", max_upload_size=10)
+    st.markdown('<div class="eyebrow">STEP 1 · YOUR RESUME</div>', unsafe_allow_html=True)
+    generation = int(st.session_state.get("resume_upload_generation", 0))
+    uploaded = st.file_uploader(
+        "Upload a resume PDF",
+        type=["pdf"],
+        key=f"resume_upload_{generation}",
+        help="Text-based PDF · maximum 10 MB and 20 pages · scanned image PDFs are not supported yet.",
+        max_upload_size=10,
+    )
+    existing_result = st.session_state.get("resume_analysis")
+    if st.button(
+        "Start a new audit",
+        disabled=uploaded is None and not existing_result,
+        help="Clear the current resume analysis and role comparison.",
+        key="start_new_audit",
+    ):
+        for key in (
+            "resume_analysis",
+            "job_match",
+            "resume_file_name",
+            "saved_target_job_title",
+            "saved_target_job_details",
+            "active_role_input_page",
+            "audit_job_title_input",
+            "audit_job_details_input",
+            "match_job_title_input",
+            "match_job_details_input",
+        ):
+            st.session_state.pop(key, None)
+        st.session_state["resume_upload_generation"] = generation + 1
+        st.rerun()
 
-    if uploaded is None:
-        st.session_state.pop("resume_analysis", None)
-        st.session_state.pop("job_match", None)
+    if uploaded is None and not existing_result:
         st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
-            card("What you get", "Structure, writing signals, and next steps", "A section checklist, achievement line checks, skill inventory, keyword clusters, and prioritized edits to consider.")
+            card("STEP 2 · TARGET ROLE", "Add the job you want", "Enter the job title and description. The audit will compare recognized skills and estimate role alignment.")
         with c2:
-            card("What this is not", "A hiring or ATS decision", "The analyzer uses visible text and simple rules. It cannot evaluate design, verify claims, or predict an employer’s screening system.")
+            card("STEP 3 · REVIEW", "Get a practical report", "See the match estimate, skills detected in both, gaps to review, and your resume structure checklist.")
         return
 
-    pdf_bytes = uploaded.getvalue()
-    digest = hashlib.sha256(pdf_bytes).hexdigest()
     result = st.session_state.get("resume_analysis")
-    if not result or result.get("_digest") != digest:
+    if uploaded is not None:
+        pdf_bytes = uploaded.getvalue()
+        digest = hashlib.sha256(pdf_bytes).hexdigest()
+    else:
+        digest = ""
+    if uploaded is not None and (not result or result.get("_digest") != digest):
+        st.session_state.pop("resume_analysis", None)
+        st.session_state.pop("job_match", None)
         try:
             with st.spinner("Reviewing the PDF text…"):
                 result = analyze_resume_pdf(pdf_bytes)
             result["_digest"] = digest
             st.session_state["resume_analysis"] = result
-            st.session_state.pop("job_match", None)
+            st.session_state["resume_file_name"] = uploaded.name
         except ValueError as error:
             st.session_state.pop("resume_analysis", None)
             st.error(str(error))
@@ -328,15 +450,74 @@ def audit_page() -> None:
             st.error("This PDF could not be read. Try exporting it again as a text-based PDF.")
             return
 
+    if result is None:
+        st.info("Upload a resume PDF to continue.")
+        return
+
+    if uploaded is None:
+        st.info(f"Using **{html.escape(str(st.session_state.get('resume_file_name', 'your saved resume')))}** from this session. Your analysis stays available when you switch pages.")
     if result["extraction_quality"] == "limited":
         st.warning(f"Limited text extracted · {result['page_count']} page{'s' if result['page_count'] != 1 else ''} · review the signals carefully")
     else:
         st.success(f"Resume reviewed · {result['page_count']} page{'s' if result['page_count'] != 1 else ''} · contact details are not displayed")
-    render_resume_analysis(result)
+
+    st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
+    with st.container(border=True):
+        st.markdown('<div class="eyebrow">STEP 2 · TARGET ROLE</div>', unsafe_allow_html=True)
+        st.subheader("What role are you applying for?")
+        st.caption("Add the job title and paste its responsibilities or requirements. We’ll compare skills and show how the estimate is calculated.")
+        _sync_role_inputs("audit", "audit_job_title_input", "audit_job_details_input")
+        with st.form("audit_role_form"):
+            role_title = st.text_input(
+                "Job title",
+                key="audit_job_title_input",
+                max_chars=160,
+                placeholder="e.g. Data Analyst",
+            )
+            role_description = st.text_area(
+                "Job details or description",
+                key="audit_job_details_input",
+                height=190,
+                max_chars=30000,
+                placeholder="Paste the responsibilities, required skills, and qualifications…",
+                help="Only recognized skill terms are compared. The full description stays in this browser session and is excluded from exports.",
+            )
+            run_role_audit = st.form_submit_button(
+                "Analyze match",
+                type="primary",
+            )
+    role_digest = _role_digest(role_title, role_description)
+    if run_role_audit:
+        if not role_description.strip():
+            st.warning("Paste the job details before analyzing the match.")
+        else:
+            st.session_state["saved_target_job_title"] = role_title
+            st.session_state["saved_target_job_details"] = role_description
+            role_result = analyze_job_match(result["skills"], role_description, result, role_title)
+            role_result["_source_digest"] = role_digest
+            role_result["_resume_digest"] = result.get("_digest")
+            st.session_state["job_match"] = role_result
+
+    role_result = st.session_state.get("job_match")
+    if role_result and (
+        role_result.get("_source_digest") != role_digest
+        or role_result.get("_resume_digest") != result.get("_digest")
+    ):
+        role_result = None
+    if role_result:
+        if not role_result["required_skills"]:
+            st.warning("No skills from our built-in vocabulary were found in the title or job details. Add the requirements section, or check the vocabulary limits described in How it works.")
+        else:
+            render_role_match(role_result, role_title, result)
+
+    st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
+    with st.expander("View complete resume audit", expanded=False):
+        st.caption("These document-wide checks complement the target-role estimate. Review the extracted text and suggestions before changing your resume.")
+        render_resume_analysis(result)
 
 
 def match_page() -> None:
-    page_heading("Job match", "Compare your skills with a real role", "Paste the job description to find skills that overlap with your resume and requirements worth addressing.")
+    page_heading("Job match", "Estimate alignment with a target role", "Compare recognized skills, review match signals, and see an illustrative ATS-style score with practical next steps.")
     resume = st.session_state.get("resume_analysis")
     if not resume:
         st.info("Start with a resume audit. Your analysis will be available here for this session.")
@@ -345,20 +526,37 @@ def match_page() -> None:
             st.rerun()
         return
 
-    description = st.text_area(
-        "Job description",
-        key="job_description",
-        height=250,
-        max_chars=30000,
-        placeholder="Paste the role responsibilities and requirements here…",
-        help="The description stays in this browser session. Only recognized skill terms are used in the comparison.",
-    )
-    description_digest = hashlib.sha256(description.encode("utf-8")).hexdigest() if description.strip() else ""
-    if st.button("Compare skills", type="primary", disabled=not description.strip()):
-        match = analyze_job_match(resume["skills"], description)
-        match["_source_digest"] = description_digest
-        match["_resume_digest"] = resume.get("_digest")
-        st.session_state["job_match"] = match
+    _sync_role_inputs("match", "match_job_title_input", "match_job_details_input")
+    with st.form("job_match_form"):
+        role_title = st.text_input(
+            "Job title",
+            key="match_job_title_input",
+            max_chars=160,
+            placeholder="e.g. Data Analyst",
+        )
+        description = st.text_area(
+            "Job details or description",
+            key="match_job_details_input",
+            height=250,
+            max_chars=30000,
+            placeholder="Paste the role responsibilities, requirements, and skills here…",
+            help="Only recognized skill terms are used in the comparison. The description remains in this browser session and is excluded from exports.",
+        )
+        compare_role = st.form_submit_button(
+            "Analyze role match",
+            type="primary",
+        )
+    description_digest = _role_digest(role_title, description)
+    if compare_role:
+        if not description.strip():
+            st.warning("Paste the job details before analyzing the match.")
+        else:
+            st.session_state["saved_target_job_title"] = role_title
+            st.session_state["saved_target_job_details"] = description
+            match = analyze_job_match(resume["skills"], description, resume, role_title)
+            match["_source_digest"] = description_digest
+            match["_resume_digest"] = resume.get("_digest")
+            st.session_state["job_match"] = match
 
     match = st.session_state.get("job_match")
     if match and (
@@ -370,59 +568,16 @@ def match_page() -> None:
         st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
         c1, c2 = st.columns(2)
         with c1:
-            card("Comparison method", "Recognized skills only", "The analyzer compares exact terms from its built-in vocabulary. It does not infer seniority, context, or transferable experience.")
+            card("Comparison method", "Transparent signals", "The estimate combines recognized skill overlap, resume section coverage, and contact-presence signals. Common skill spelling variants are normalized.")
         with c2:
-            card("Use gaps carefully", "Add evidence, not buzzwords", "A missing keyword can be a terminology mismatch. Include a skill only when you can support it with real experience.")
+            card("Use gaps carefully", "Add evidence, not buzzwords", "A missing term can reflect different wording or a skill outside the built-in vocabulary. Include it only when you can support it with real experience.")
         return
 
     st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
     if not match["required_skills"]:
-        st.warning("No recognized skill terms were found in that description. Try including the requirements or skills section.")
+        st.warning("No recognized skill terms were found in those job details. Try including the requirements or skills section.")
         return
-
-    match_metrics = (
-        ("Recognized requirements", str(len(match["required_skills"])), "From pasted job text"),
-        ("Skills in your resume", str(len(match["matched_skills"])), "Exact vocabulary overlap"),
-        ("Keyword coverage", f"{match['coverage']}%", "Coverage, not fit or probability"),
-    )
-    st.markdown('<div class="metric-grid three">' + "".join(metric_card_markup(*item) for item in match_metrics) + '</div>', unsafe_allow_html=True)
-
-    st.progress(match["coverage"] / 100, text=f"{match['coverage']}% of recognized job-description skills appear in the resume text")
-    left, right = st.columns(2, gap="large")
-    with left:
-        st.subheader("Skills found in both")
-        if match["matched_skills"]:
-            for skill in match["matched_skills"]:
-                st.markdown(f"✓ &nbsp; {html.escape(skill)}", unsafe_allow_html=True)
-        else:
-            st.caption("No exact overlaps found in the built-in vocabulary.")
-    with right:
-        st.subheader("Skills not detected in your resume")
-        if match["missing_skills"]:
-            for skill in match["missing_skills"]:
-                st.markdown(f"＋ &nbsp; {html.escape(skill)}", unsafe_allow_html=True)
-        else:
-            st.success("All recognized job-description skills were also detected in the resume.")
-    st.caption("Review each gap against your actual experience. This comparison does not establish qualification or predict selection.")
-    if match["missing_skills"]:
-        st.markdown(
-            '<div class="signal-note"><b>Suggested next step:</b> For each term not detected, check whether you have relevant evidence under a different name. If you do, describe that experience naturally; do not add unsupported keywords.</div>',
-            unsafe_allow_html=True,
-        )
-    match_report = {
-        "product": "ResumeLens",
-        "recognized_requirements": match["required_skills"],
-        "matched_skills": match["matched_skills"],
-        "not_detected": match["missing_skills"],
-        "keyword_coverage_percent": match["coverage"],
-        "note": "Exact vocabulary overlap only; not a qualification, fit, or hiring score. Resume and job description text are excluded.",
-    }
-    st.download_button(
-        "Download role comparison (JSON)",
-        data=json.dumps(match_report, indent=2, ensure_ascii=False),
-        file_name="resumelens-role-comparison.json",
-        mime="application/json",
-    )
+    render_role_match(match, role_title, resume)
 
 
 def method_page() -> None:
@@ -431,14 +586,14 @@ def method_page() -> None:
     with a:
         card("01 · Extraction", "Read selectable PDF text", "pdfminer.six extracts text and page count. Contact fields are reduced to presence signals; their values are not shown or written to storage.")
     with b:
-        card("02 · Evidence", "Match a fixed vocabulary", "A local keyword list detects common skills. Section headings and contact signals contribute to the structure checklist; action verbs and numbers are checked as writing clues.")
+        card("02 · Evidence", "Match a fixed vocabulary", "A local keyword list detects common skills and normalizes a short list of common spelling variants. Section headings and writing patterns are checked as review signals.")
     c, d = st.columns(2, gap="large")
     with c:
         card("03 · Scoring", "Checklist coverage from 0 to 100", "Each resume section has a stated weight. Points indicate only whether the analyzer found evidence of that section; they do not measure quality.")
     with d:
-        card("04 · Matching", "Count shared role skills", "The job comparison reports exact vocabulary overlap and terms not detected. Exportable results exclude both the resume and job description text.")
+        card("04 · Matching", "Estimate role alignment", "A weighted local estimate combines recognized skill coverage, section coverage, and contact signals. It is not an employer ATS result or hiring prediction.")
     st.markdown('<div class="section-head"></div>', unsafe_allow_html=True)
-    st.info("Text-based PDFs up to 10 MB and 20 pages are supported. Scanned documents need OCR, which is not included. Writing checks use simple patterns and can miss content when PDF line breaks are unusual. Review every signal and suggestion yourself.")
+    st.info("Text-based PDFs up to 10 MB and 20 pages are supported. Scanned documents need OCR, which is not included. Role matching checks a built-in skill vocabulary and common spelling variants; it may miss synonyms, experience levels, qualifications, or context. The ATS-style estimate uses 70% recognized skill coverage, 20% section coverage, and 10% contact-signal completeness. It is not an employer ATS score or hiring prediction.")
     st.markdown("**Privacy note:** local runs keep analysis in the current Streamlit session and create no resume database or upload archive. On a hosted deployment, the server operator processes the uploaded document; use a deployment you trust.")
 
 

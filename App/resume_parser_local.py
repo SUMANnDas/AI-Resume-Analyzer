@@ -97,6 +97,27 @@ ROLE_CLUSTERS = {
     "Business & operations": {"business analysis", "project management", "sales", "marketing", "financial analysis", "customer service", "excel", "communication", "leadership"},
 }
 
+# Common spellings in job descriptions and resumes. Normalize only well-known
+# variants so the comparison remains understandable and auditable.
+SKILL_ALIASES = (
+    (re.compile(r"\bdata analytics\b", re.IGNORECASE), "data analysis"),
+    (re.compile(r"\bdata analyst\b", re.IGNORECASE), "data analysis"),
+    (re.compile(r"\bdata scientist\b", re.IGNORECASE), "data science"),
+    (re.compile(r"\bbusiness analyst\b", re.IGNORECASE), "business analysis"),
+    (re.compile(r"\bproduct manager\b", re.IGNORECASE), "product management"),
+    (re.compile(r"\bproject manager\b", re.IGNORECASE), "project management"),
+    (re.compile(r"\bjs\b", re.IGNORECASE), "javascript"),
+    (re.compile(r"\breactjs\b", re.IGNORECASE), "react"),
+    (re.compile(r"\bnodejs\b", re.IGNORECASE), "node.js"),
+    (re.compile(r"\bpostgres\b", re.IGNORECASE), "postgresql"),
+    (re.compile(r"\bamazon web services\b", re.IGNORECASE), "aws"),
+    (re.compile(r"\b(?:gcp|google cloud platform)\b", re.IGNORECASE), "google cloud"),
+    (re.compile(r"\bk8s\b", re.IGNORECASE), "kubernetes"),
+    (re.compile(r"\bsklearn\b", re.IGNORECASE), "scikit-learn"),
+    (re.compile(r"\bpowerbi\b", re.IGNORECASE), "power bi"),
+    (re.compile(r"\brestful apis?\b", re.IGNORECASE), "rest api"),
+)
+
 
 def _term_pattern(term: str) -> re.Pattern[str]:
     escaped = re.escape(term.casefold())
@@ -106,6 +127,8 @@ def _term_pattern(term: str) -> re.Pattern[str]:
 def find_skills(text: str) -> list[str]:
     """Return vocabulary terms found at word boundaries, in stable display order."""
     normalized = text.casefold()
+    for pattern, canonical in SKILL_ALIASES:
+        normalized = pattern.sub(canonical, normalized)
     found = [term for term in SKILL_TERMS if _term_pattern(term).search(normalized)]
     # A compound technical term is a more useful signal than its shorter token.
     if "rest api" in found:
@@ -264,16 +287,63 @@ def analyze_resume_pdf(pdf_bytes: bytes) -> dict[str, object]:
     return analyze_resume_text(text, pages)
 
 
-def analyze_job_match(resume_skills: list[str], job_description: str) -> dict[str, object]:
-    """Compare recognized vocabulary terms; this is not a semantic fit model."""
-    required = find_skills(job_description)
+def analyze_job_match(
+    resume_skills: list[str],
+    job_description: str,
+    resume_analysis: dict[str, object] | None = None,
+    job_title: str = "",
+) -> dict[str, object]:
+    """Compare recognized terms and calculate a transparent ATS-style estimate."""
+    required = find_skills(f"{job_title}\n{job_description}")
     resume_set = {skill.casefold() for skill in resume_skills}
     matched = [skill for skill in required if skill.casefold() in resume_set]
     missing = [skill for skill in required if skill.casefold() not in resume_set]
     coverage = round(len(matched) * 100 / len(required)) if required else 0
+    analysis = resume_analysis or {}
+    sections = analysis.get("sections", {})
+    if isinstance(sections, dict) and sections:
+        structural_sections = {
+            name: item for name, item in sections.items()
+            if name != "Contact signals" and isinstance(item, dict)
+        }
+        available_structure_points = sum(int(item.get("weight", 0)) for item in structural_sections.values())
+        earned_structure_points = sum(int(item.get("earned", 0)) for item in structural_sections.values())
+        structure_score = round(earned_structure_points * 100 / available_structure_points) if available_structure_points else 0
+    else:
+        structure_score = int(analysis.get("score", 0))
+    contact_signals = analysis.get("contact_signals", {})
+    if not isinstance(contact_signals, dict):
+        contact_signals = {}
+    contact_count = sum(bool(contact_signals.get(item)) for item in ("email", "phone", "linkedin"))
+    contact_coverage = round(contact_count * 100 / 3)
+
+    # This is an explainable heuristic, not a result from an employer's ATS.
+    ats_score = round(coverage * 0.70 + structure_score * 0.20 + contact_coverage * 0.10)
+    projected_score = round(100 * 0.70 + structure_score * 0.20 + contact_coverage * 0.10)
+    if ats_score < 45:
+        score_band = "Limited role alignment"
+    elif ats_score < 75:
+        score_band = "Developing role alignment"
+    else:
+        score_band = "Strong role alignment"
+
     return {
         "required_skills": required,
         "matched_skills": matched,
         "missing_skills": missing,
         "coverage": coverage,
+        "ats_score": ats_score,
+        "score_band": score_band,
+        "projected_score": projected_score,
+        "potential_score_gain": max(0, projected_score - ats_score),
+        "score_components": {
+            "keyword_coverage": coverage,
+            "structure_coverage": structure_score,
+            "contact_completeness": contact_coverage,
+        },
+        "score_weights": {
+            "keyword_coverage": 70,
+            "structure_coverage": 20,
+            "contact_completeness": 10,
+        },
     }
